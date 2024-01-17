@@ -1,58 +1,82 @@
 const express = require('express');
-const cors = require('cors'); // Import the cors middleware
+const cors = require('cors');
 const multer = require('multer');
 const { exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Use the cors middleware
 app.use(cors());
+app.use(express.json());
+
+// Serve the static files from the React app
+app.use(express.static(path.join(__dirname, 'build')));
+
+// app.use(express.static('public'));
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-app.use(express.json());
-app.use(express.static('public'));
-
 app.post('/upload', upload.single('file'), (req, res) => {
-    console.log("original file name is: ", req.file.originalname)
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-
-    const fileNameWithExtension = req.file.originalname
-    const lastDotIndex = fileNameWithExtension.lastIndexOf('.');
-    const fileNameWithoutExtension2 = fileNameWithExtension.substring(0, lastDotIndex);
-
-    // Save the uploaded file temporarily
-    const filePath = path.join(__dirname, 'uploads', fileNameWithoutExtension2 + '.txt');
-    console.log('filePath: ', filePath)
-    const buffer = req.file.buffer;
-    require('fs').writeFileSync(filePath, buffer);
-
-    // Call your Python script with the uploaded file
-    const pythonScript = './convert-iterm2-to-warp.py';
-    exec(`python ${pythonScript} ${filePath}`, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Error running Python script:', error);
-            return res.status(500).send('Error running Python script.');
+    try {
+        if (!req.file) {
+            return res.status(400).send('No file uploaded.');
         }
 
-        const generatedFileName = fileNameWithoutExtension2 + '.yaml'
-        const yamlFilePath = './generated/' + generatedFileName;
-        console.log('generatedFileName: ', generatedFileName)
-        res.download(yamlFilePath, generatedFileName, (downloadError) => {
-            if (downloadError) {
-                console.error('Error sending generated YAML:', downloadError);
-                res.status(500).send('Error sending generated YAML.');
+        const fileNameWithExtension = req.file.originalname;
+        const lastDotIndex = fileNameWithExtension.lastIndexOf('.');
+        const fileNameWithoutExtension = fileNameWithExtension.substring(0, lastDotIndex);
+
+        // Save the uploaded file temporarily
+        const filePath = path.join(__dirname, 'uploads', fileNameWithoutExtension + '.txt');
+        console.log('filePath: ', filePath);
+        fs.writeFileSync(filePath, req.file.buffer);
+
+        // Call your Python script with the uploaded file
+        const pythonScript = './convert-iterm2-to-warp.py';
+        exec(`python ${pythonScript} ${filePath}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error('Error running Python script:', error);
+                return res.status(500).send('Error running Python script.');
             }
 
-            // Clean up: Delete the temporary uploaded file
-            // require('fs').unlinkSync(filePath);
+            const generatedFileName = fileNameWithoutExtension + '.yaml';
+            const yamlFilePath = path.join(__dirname, 'generated', generatedFileName);
+            console.log('generatedFileName: ', generatedFileName);
+
+            // Send the download link as the response
+            const downloadLink = `/download/${generatedFileName}`;
+            res.json({ downloadLink: downloadLink,
+                       fileName: fileNameWithoutExtension,
+            });
+
+            // Optionally, clean up: Delete the temporary uploaded file
+            // fs.unlinkSync(filePath);
         });
-    });
+    } catch (error) {
+        console.error('Error processing upload:', error);
+        res.status(500).send('Error processing upload.');
+    }
+});
+
+app.get('/download/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'generated', filename);
+    console.log('filePath: ', filePath)
+
+    // Set the response headers for file download
+    res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+    res.setHeader('Content-type', 'application/yaml');
+
+    // Send the file as the response
+    res.sendFile(filePath);
+});
+
+// Handle the root URL to serve the React app
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 app.listen(PORT, () => {
