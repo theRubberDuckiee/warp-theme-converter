@@ -14,8 +14,6 @@ const FileUploadForm: React.FC = () => {
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        console.log('hi')
-
 
         if (!file) {
             console.error('No file selected.');
@@ -26,14 +24,12 @@ const FileUploadForm: React.FC = () => {
         formData.append('file', file);
 
         try {
-            const response = await axios.post('https://warp-theme-converter.vercel.app/upload', formData, {
+            const response = await axios.post('https://warp-theme-converter.vercel.app/api/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            // Set download link to response data
             setDownloadLink(response.data.downloadLink);
             setFileName(response.data.fileName);
-            console.log('downloadlink: ', downloadLink)
         } catch (error) {
             console.error('Error uploading file:', error);
         }
@@ -42,7 +38,6 @@ const FileUploadForm: React.FC = () => {
     const handleDownload = async () => {
         if (downloadLink) {
             try {
-                // Use the browser's download API for better compatibility
                 const blob = await fetch(downloadLink).then((res) => res.blob());
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
