@@ -25,6 +25,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 app.post('/upload', upload.single('file'), (req, res) => {
+    console.log("yoyo")
     try {
         if (!req.file) {
             return res.status(400).send('No file uploaded.');
