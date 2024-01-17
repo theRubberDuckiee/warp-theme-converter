@@ -8,7 +8,12 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors());
+// Allow requests from your frontend domain (replace 'http://localhost:3000' with your actual frontend URL)
+app.use(cors({
+    origin: 'https://warp-theme-converter.vercel.app/',
+    methods: 'POST',
+    optionsSuccessStatus: 204, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  }));
 app.use(express.json());
 
 // Serve the static files from the React app
