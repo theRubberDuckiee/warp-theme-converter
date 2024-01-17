@@ -24,7 +24,7 @@ const FileUploadForm: React.FC = () => {
         formData.append('file', file);
 
         try {
-            const response = await axios.post('http://localhost:8080/upload', formData, {
+            const response = await axios.post('https://warp-theme-converter.vercel.app/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
