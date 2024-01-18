@@ -1,7 +1,12 @@
 {
     "functions": {
-      "api/server.js": {
-        "runtime": "nodejs16"
+      "api/upload.js": {
+        "memory": 3008,
+        "maxDuration": 60
+      },
+      "api/download/[filename].js": {
+        "memory": 1024,
+        "maxDuration": 30
       }
     }
   }
